@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id           String       @id @default(cuid())
+  name         String
+  quantity     Int
+  purchasePrice Float
+  imageUrl     String?      // Optional image URL
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  createdAt    DateTime     @default(now())
+   updatedAt    DateTime     @default(now()) @updatedAt
+}
+
+
+model Transaction {
+  id        String   @id @default(cuid())
+  name      String
+  amount    Float
+  type      TransactionType
+  quantity  Int                         // ✅ Ajouté ici
+  product   Product?  @relation(fields: [productId], references: [id])
+  productId String?
+  createdAt DateTime @default(now())
+}
+
+
+enum TransactionType {
+  SALE
+  EXPENSE
+}
