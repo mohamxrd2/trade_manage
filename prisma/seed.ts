@@ -1,44 +1,43 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, TransactionType } from '@prisma/client';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-  const userId = 'cmbqrbf2200000cx4sanh7gb6'
+  const userId = 'cmbqrbf2200000cx4sanh7gb6';
+  const productIds = [
+    'cmbsp4bts000vmhi75k76wnjn',
+    'cmbsqucd8000zmhi79cas52m7',
+    'cmbt7fe770013mhi70n3fyzgn',
+  ];
 
-  await prisma.product.createMany({
-    data: [
-      {
-        name: 'Sac de riz',
-        quantity: 100,
-        purchasePrice: 15000,
-        imageUrl: 'https://example.com/rice.jpg',
-        userId: userId,
-      },
-      {
-        name: 'Carton de lait',
-        quantity: 50,
-        purchasePrice: 8000,
-        imageUrl: 'https://example.com/lait.jpg',
-        userId: userId,
-      },
-      {
-        name: 'Bouteille d’huile',
-        quantity: 200,
-        purchasePrice: 1200,
-        imageUrl: 'https://example.com/oil.jpg',
-        userId: userId,
-      },
-    ],
-  })
+  const transactionsData = Array.from({ length: 20 }).map((_, i) => {
+    const isSale = Math.random() > 0.5;
+    const randomProductId = productIds[Math.floor(Math.random() * productIds.length)];
+    const quantity = Math.floor(Math.random() * 5) + 1; // entre 1 et 5
+    const amount = Math.floor(Math.random() * 5001) + 1000; // entier entre 1000 et 6000
 
-  console.log('Produits insérés avec succès !')
+    return {
+      name: `${isSale ? 'Vente' : 'Dépense'} #${i + 1}`,
+      type: isSale ? TransactionType.SALE : TransactionType.EXPENSE,
+      amount,
+      quantity,
+      userId,
+      productId: randomProductId,
+    };
+  });
+
+  await prisma.transaction.createMany({
+    data: transactionsData,
+  });
+
+  console.log('✅ Transactions seeded');
 }
 
 main()
   .catch((e) => {
-    console.error(e)
-    process.exit(1)
+    console.error(e);
+    process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+  .finally(() => {
+    prisma.$disconnect();
+  });

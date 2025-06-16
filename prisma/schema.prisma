@@ -3,14 +3,12 @@
 
 generator client {
   provider = "prisma-client-js"
-
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
-
 
 model User {
   id        String    @id @default(cuid())
@@ -20,30 +18,31 @@ model User {
 }
 
 model Product {
-  id           String       @id @default(cuid())
-  name         String
-  quantity     Int
+  id            String        @id @default(cuid())
+  name          String
+  quantity      Int
   purchasePrice Float
-  imageUrl     String?      // Optional image URL
-  userId       String
-  user         User         @relation(fields: [userId], references: [id])
-  transactions Transaction[]
-  createdAt    DateTime     @default(now())
-   updatedAt    DateTime     @default(now()) @updatedAt
+  imageUrl      String? // Optional image URL
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  transactions  Transaction[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now()) @updatedAt
 }
 
-
 model Transaction {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   name      String
   amount    Float
   type      TransactionType
-  quantity  Int                         // ✅ Ajouté ici
-  product   Product?  @relation(fields: [productId], references: [id])
+  quantity  Int
+  product   Product?        @relation(fields: [productId], references: [id])
   productId String?
-  createdAt DateTime @default(now())
-}
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
+  userId String // 👈 Ajouté ici
+}
 
 enum TransactionType {
   SALE

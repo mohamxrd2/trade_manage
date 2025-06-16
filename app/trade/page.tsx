@@ -1,85 +1,164 @@
+"use client";
+
 import Wrapper from "@/components/wrapper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, CreditCard } from "lucide-react";
 import TransactionList from "@/components/TransactionList";
 import { Transaction } from "@/type";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { CreditCard, PlusCircle } from "lucide-react";
+import { getTransactions, getNetRevenue } from "../actions";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import AddSaleForm from "@/components/AddSaleModal";
+
 
 export default function Page() {
-  // Simule des données (tu pourras les remplacer plus tard)
-  const totalRevenue = 1285000; // en FCFA
+  const { user } = useUser();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [netRevenue, setNetRevenue] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [updatingRevenue, setUpdatingRevenue] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false); // <-- ajout de l'état modal
 
- 
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      name: "Ordinateur HP",
-      amount: 100000,
-      quantity: 2,
-      type: "SALE",
-      productId: null,
-      userId: "user1",
-      createdAt: new Date("2025-06-10"),
-      updatedAt: new Date("2025-06-10"),
-    },
-    {
-      id: "2",
-      name: "Smartphone Infinix",
-      amount: 150000,
-      quantity: 1,
-      type: "EXPENSE",
-      productId: null,
-      userId: "user2",
-      createdAt: new Date("2025-06-09"),
-      updatedAt: new Date("2025-06-09"),
-    },
-    {
-      id: "3",
-      name: "Casque Bluetooth",
-      amount: 85000,
-      quantity: 1,
-      type: "EXPENSE",
-      productId: null,
-      userId: "user3",
-      createdAt: new Date("2025-06-08"),
-      updatedAt: new Date("2025-06-08"),
-    },
-  ];
+  const loadData = async () => {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+
+    setLoading(true);
+    try {
+      const [data, revenue] = await Promise.all([
+        getTransactions(email),
+        getNetRevenue(email),
+      ]);
+      setTransactions(data);
+      setNetRevenue(revenue);
+    } catch (error) {
+      console.error("Erreur lors du chargement des données", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user?.primaryEmailAddress?.emailAddress]);
+
+  const handleUpdateTransaction = async (updated: {
+    id: string;
+    quantity: number;
+    amount: number;
+  }) => {
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.id === updated.id
+          ? { ...t, quantity: updated.quantity, amount: updated.amount }
+          : t
+      )
+    );
+
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+
+    setUpdatingRevenue(true);
+    try {
+      const revenue = await getNetRevenue(email);
+      setNetRevenue(revenue);
+    } catch (error) {
+      console.error("Erreur lors du recalcul du revenu", error);
+    } finally {
+      setUpdatingRevenue(false);
+    }
+  };
+
   
+
+  const handleDeleteTransaction = async (id: string) => {
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+  
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+  
+    setUpdatingRevenue(true);
+    try {
+      const revenue = await getNetRevenue(email);
+      setNetRevenue(revenue);
+    } catch (error) {
+      console.error("Erreur lors du recalcul du revenu", error);
+    } finally {
+      setUpdatingRevenue(false);
+    }
+  };
+  
+
+  const handleAddTransaction = (transaction: Transaction) => {
+    setTransactions((prev) => [transaction, ...prev]);
+    loadData(); // Rechargement du revenu après ajout
+  };
 
   return (
     <Wrapper>
       <div className="px-4 sm:px-6 lg:px-8 space-y-6">
-
-        {/* Header avec bouton */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-foreground">Ventes</h1>
-          <Button className="flex items-center gap-2">
-            <PlusCircle className="w-4 h-4" />
-            Nouvelle vente
-          </Button>
+
+          {/* 💡 Bouton avec modale intégrée */}
+          <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <PlusCircle className="w-4 h-4" />
+                Nouvelle vente
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nouvelle vente</DialogTitle>
+              </DialogHeader>
+              <AddSaleForm
+                onAdd={handleAddTransaction}
+                onClose={() => setShowAddForm(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Carte des revenus */}
+        {/* Revenus totaux */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenus totaux</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Revenus totaux
+            </CardTitle>
             <CreditCard className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              {totalRevenue.toLocaleString("fr-FR")} FCFA
+            <div
+              className={`text-2xl font-bold text-primary ${
+                updatingRevenue ? "opacity-50 animate-pulse" : ""
+              }`}
+            >
+              {netRevenue.toLocaleString("fr-FR")} FCFA
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Mise à jour aujourd’hui</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Mise à jour automatique
+            </p>
           </CardContent>
         </Card>
 
         {/* Liste des transactions */}
         <div className="border rounded-xl divide-y divide-border overflow-hidden">
-         
-         
-            <TransactionList transactions={transactions} />
-       
+          <TransactionList
+            transactions={transactions}
+            loading={loading}
+            onUpdateTransaction={handleUpdateTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
+          />
         </div>
       </div>
     </Wrapper>

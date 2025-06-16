@@ -9,22 +9,27 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        success: "bg-green-500 text-white",
+        success:
+          "bg-green-100 text-green-800 border-transparent dark:bg-green-900 dark:text-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-800",
+
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+          "bg-blue-100 text-blue-800 border-transparent dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800",
+
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "bg-gray-100 text-gray-800 border-transparent dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700",
+
         destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-red-100 text-red-800 border-transparent dark:bg-red-900 dark:text-red-200 dark:border-red-800 hover:bg-red-200 dark:hover:bg-red-800",
+
         outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
       },
     },
     defaultVariants: {
       variant: "default",
     },
   }
-)
+);
 
 function Badge({
   className,

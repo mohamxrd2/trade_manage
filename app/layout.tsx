@@ -7,6 +7,7 @@ import {
 
 } from '@clerk/nextjs'
 import { Toaster } from "sonner";
+import PageLoadingProgress from "@/components/PageLoadingProgress";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,12 +35,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`} 
       >
+
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
           >
+            <PageLoadingProgress />
             {children}
             <Toaster richColors /> {/* Affiche les toasts partout */}
           </ThemeProvider>
