@@ -7,20 +7,35 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { Icon } from "@tabler/icons-react"
+
+import {
+  IconDashboard,
+  IconBox,
+  IconChartBar,
+  IconListDetails,
+  IconUser,
+} from "@tabler/icons-react"
+
 import { usePathname } from "next/navigation"
 import clsx from "clsx"
 import Link from "next/link"
 
-export function NavMain({
-  items,
-}: {
-  items: {
-    title: string
-    url: string
-    icon?: Icon
-  }[]
-}) {
+// Map des clés d'icônes aux composants
+const iconMap = {
+  dashboard: IconDashboard,
+  box: IconBox,
+  chart: IconChartBar,
+  list: IconListDetails,
+  user: IconUser
+}
+
+type NavItem = {
+  title: string
+  url: string
+  iconKey?: keyof typeof iconMap
+}
+
+export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
 
   return (
@@ -29,6 +44,8 @@ export function NavMain({
         <SidebarMenu>
           {items.map((item) => {
             const isActive = pathname === item.url
+            const Icon = item.iconKey ? iconMap[item.iconKey] : null
+
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -37,12 +54,12 @@ export function NavMain({
                   className={clsx(
                     "transition-all",
                     isActive
-                      ? "bg-accent-foreground text-primary-foreground  "
+                      ? "bg-accent-foreground text-primary-foreground"
                       : "hover:bg-muted"
                   )}
                 >
                   <Link href={item.url} className="flex items-center gap-2">
-                    {item.icon && <item.icon className="w-5 h-5" />}
+                    {Icon && <Icon className="w-5 h-5" />}
                     <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>

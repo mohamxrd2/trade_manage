@@ -1,5 +1,7 @@
 // types.ts
 
+import { iconMap } from "./lib/icons";
+
 
 
 export type Product = {
@@ -11,6 +13,7 @@ export type Product = {
     userId: string;
     createdAt: Date;
     updatedAt: Date;
+
   };
 
 
@@ -38,4 +41,10 @@ export type Product = {
     imageUrl?: string[];
     general?: string[]; // Erreur générale en haut du formulaire
   }
+
+  export type NavItem = {
+    title: string;
+    url: string;
+    iconKey?: keyof typeof iconMap;
+  };
   

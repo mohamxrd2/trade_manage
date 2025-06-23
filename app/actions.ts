@@ -1,29 +1,18 @@
 "use server";
 
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { productSchema } from "@/lib/productSchema";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-export async function checkAndAddUser(email: string | undefined) {
-  if (!email) return;
-  try {
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
+export async function signOutAction() {
+  await auth.api.signOut({
+    headers: await headers(),
+  });
 
-    if (!existingUser) {
-      await prisma.user.create({
-        data: { email },
-      });
-      console.log("Nouvel utilisateur ajouté dans la base de données");
-    } else {
-      console.log("Utilisateur déjà présent dans la base de données");
-    }
-  } catch (error) {
-    console.error("Erreur lors de la vérification de l'utilisateur:", error);
-  }
+  redirect("/");
 }
 export async function getProducts(email: string) {
   try {
@@ -341,6 +330,137 @@ export async function createTransaction({
       };
     }
   }
+
+  export async function getSalePercentage(productId: string) {
+    try {
+      // 1. Récupérer le produit
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+      });
+  
+      if (!product) {
+        throw new Error("Produit non trouvé.");
+      }
+  
+      // 2. Récupérer les transactions de type SALE
+      const sales = await prisma.transaction.findMany({
+        where: {
+          productId,
+          type: "SALE",
+        },
+      });
+  
+      // 3. Calculer la somme des quantités vendues
+      const totalSoldQuantity = sales.reduce((sum, t) => sum + t.quantity, 0);
+  
+      // 4. Calculer le pourcentage
+      const percentage = product.quantity > 0
+        ? (totalSoldQuantity * 100) / product.quantity
+        : 0;
+  
+      return {
+        success: true,
+        percentage: Math.min(100, Math.round(percentage)), // jamais plus de 100%, arrondi
+        totalSoldQuantity,
+      };
+    } catch (error) {
+      console.error("Erreur dans getSalePercentage:", error);
+      return {
+        success: false,
+        error: "Impossible de calculer le pourcentage de vente.",
+      };
+    }
+  }
+  export async function getLowStockCount(userEmail: string) {
+    try {
+      // 1. Récupérer tous les produits de l'utilisateur
+      const products = await prisma.product.findMany({
+        where: {
+          user: {
+            email: userEmail,
+          },
+        },
+      });
+  
+      let lowStockCount = 0;
+  
+      // 2. Vérifier chaque produit
+      for (const product of products) {
+        const sales = await prisma.transaction.findMany({
+          where: {
+            productId: product.id,
+            type: "SALE",
+          },
+        });
+  
+        const totalSoldQuantity = sales.reduce((sum, t) => sum + t.quantity, 0);
+  
+        const percentage = product.quantity > 0
+          ? (totalSoldQuantity * 100) / product.quantity
+          : 0;
+  
+        if (percentage >= 90) {
+          lowStockCount++;
+        }
+      }
+  
+      return {
+        success: true,
+        count: lowStockCount,
+      };
+    } catch (error) {
+      console.error("Erreur dans getLowStockCount:", error);
+      return {
+        success: false,
+        count: 0,
+        error: "Impossible de récupérer les stocks faibles.",
+      };
+    }
+  }
+
+  export async function getTotalRemainingQuantity(email: string): Promise<number> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+  
+      if (!user) return 0;
+  
+      const products = await prisma.product.findMany({
+        where: { userId: user.id },
+      });
+  
+      if (products.length === 0) return 0;
+  
+      const salesGrouped = await prisma.transaction.groupBy({
+        by: ["productId"],
+        where: {
+          productId: { in: products.map((p) => p.id) },
+          type: "SALE",
+        },
+        _sum: { quantity: true },
+      });
+  
+      const salesMap = new Map(
+        salesGrouped.map((sale) => [sale.productId, sale._sum.quantity || 0])
+      );
+  
+      const totalRemaining = products.reduce((total, product) => {
+        const soldQty = salesMap.get(product.id) || 0;
+        const remaining = product.quantity - soldQty;
+        return total + Math.max(0, remaining);
+      }, 0);
+  
+      return totalRemaining;
+    } catch (error) {
+      console.error("Erreur lors du calcul de la quantité totale restante :", error);
+      return 0;
+    }
+  }
+  
+  
+
+
   
   
   

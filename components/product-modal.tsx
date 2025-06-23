@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+
 import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +20,23 @@ import { addProductAction } from "@/app/actions";
 import { ProductFormError } from "@/type";
 import { useCustomToast } from "@/lib/use-toast";
 
-export function DialogDemo({ onAddSuccess }: { onAddSuccess: () => void }) {
-  const { user } = useUser();
-  const email = user?.primaryEmailAddress?.emailAddress;
+type User = {
+  id: string;
+  name: string;
+  emailVerified: boolean;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+  image?: string | null;
+};
+
+type DialogDemoProps = {
+  user?: User ;
+  onAddSuccess: () => void;
+};
+export function DialogDemo({ user, onAddSuccess }: DialogDemoProps) {
+
+  const email = user?.email;
   const [error, setError] = useState<ProductFormError | null>(null);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);

@@ -1,13 +1,20 @@
-'use client'
+
 import HeroSection from "@/components/hero-section";
+import { getUser } from "@/lib/auth-session";
 
 
 
-export default function Home() {
+
+export default async function Home() {
+
+  const user = await getUser();
+
+ 
+
 
   return (
     <div className="">
-     <HeroSection />
+     <HeroSection user={user}  />
     </div>
   );
 }

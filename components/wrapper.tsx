@@ -1,13 +1,24 @@
 import React from "react";
 import { SidebarInset, SidebarProvider } from "./ui/sidebar";
-import { AppSidebar } from "./app-sidebar";
 import { SiteHeader } from "./site-header";
+import AppSidebar from "./app-sidebar";
+
+type User = {
+  id: string;
+  name: string;
+  emailVerified: boolean;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+  image?: string | null;
+};
 
 type WrapperProps = {
   children: React.ReactNode;
+  user?: User ; // 👈 on accepte user en tant que props ici
 };
 
-const Wrapper = ({ children }: WrapperProps) => {
+const Wrapper = ({ children, user }: WrapperProps) => {
   return (
     <div>
       <SidebarProvider
@@ -18,7 +29,7 @@ const Wrapper = ({ children }: WrapperProps) => {
           } as React.CSSProperties
         }
       >
-        <AppSidebar variant="inset" />
+        <AppSidebar user={user} variant="inset" /> {/* 👈 on transmet user */}
         <SidebarInset>
           <SiteHeader />
           <div className="flex flex-1 flex-col">

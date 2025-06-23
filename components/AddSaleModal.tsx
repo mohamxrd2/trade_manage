@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import {
   Popover,
   PopoverContent,
@@ -17,20 +17,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Product, Transaction } from "@/type";
-import { useUser } from "@clerk/nextjs";
-import { createTransaction, getProducts, getRemainingQuantity } from "@/app/actions";
+
+import { createTransaction, getProducts } from "@/app/actions";
 import { useCustomToast } from "@/lib/use-toast";
 import { cn } from "@/lib/utils";
 import { getSaleFormSchema } from "@/lib/transactionSchema";
 
-
+type User = {
+  id: string;
+  name: string;
+  emailVerified: boolean;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+  image?: string | null;
+};
 
 interface AddSaleFormProps {
   onAdd: (transaction: Transaction) => void;
   onClose: () => void;
+  user: User;
 }
 
-export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
+export default function AddSaleForm({ onAdd, onClose, user }: AddSaleFormProps) {
   const [isPending, startTransition] = useTransition();
   const [quantity, setQuantity] = useState<number>(0);
   const [amount, setAmount] = useState<number>(0);
@@ -39,13 +48,13 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
   const [productName, setProductName] = useState("");
   const [open, setOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [localLoading, setLocalLoading] = useState(false);
 
   const { showToast } = useCustomToast();
-  const { user } = useUser();
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const email = user?.primaryEmailAddress?.emailAddress;
+      const email = user?.email;
       if (!email) return;
 
       try {
@@ -59,53 +68,46 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
     };
 
     fetchProducts();
-  }, [user?.primaryEmailAddress?.emailAddress, showToast]);
+  }, [user?.email, showToast]);
 
   const handleSave = async () => {
-    const email = user?.primaryEmailAddress?.emailAddress;
-  
+    const email = user?.email;
+
     if (!email) {
       showToast("error", "Erreur", "Utilisateur non connecté");
       return;
     }
-  
+
     if (!productId) {
       setErrors({ productName: "Veuillez sélectionner un produit." });
       return;
     }
-  
-    const remaining = await getRemainingQuantity(productId);
-  
-   
 
-    if (!remaining.success || typeof remaining.remainingQuantity !== 'number') {
-        showToast("error", "Erreur", "Impossible de vérifier le stock du produit.");
-        return;
-      }
-  
-    const schema = getSaleFormSchema(remaining.remainingQuantity); // ✅ correction ici
-  
+    // Utilisation d'une limite haute arbitraire pour la validation locale (ex: 1 million)
+    const schema = getSaleFormSchema(1000000);
+
     const formData = {
       productName: productName.trim(),
       quantity,
       amount,
     };
-  
+
     const result = schema.safeParse(formData);
-  
+
     if (!result.success) {
       const fieldErrors = result.error.errors.reduce((acc, error) => {
         acc[error.path[0] as string] = error.message;
         return acc;
       }, {} as Record<string, string>);
-  
+
       setErrors(fieldErrors);
       showToast("error", "Erreur", "Corrigez les erreurs dans le formulaire.");
       return;
     }
-  
+
     setErrors({});
-  
+    setLocalLoading(true); // Bloque immédiatement le bouton
+
     startTransition(async () => {
       try {
         const result = await createTransaction({
@@ -116,7 +118,7 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
           type: "SALE",
           email,
         });
-  
+
         if (result.success && result.transaction) {
           showToast("success", "Succès", "Vente ajoutée !");
           onAdd(result.transaction as Transaction);
@@ -127,10 +129,11 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
       } catch (err) {
         console.error("Erreur lors de l'ajout de la vente :", err);
         showToast("error", "Erreur", "Une erreur est survenue.");
+      } finally {
+        setLocalLoading(false);
       }
     });
   };
-  
 
   return (
     <div className="space-y-4 p-4">
@@ -164,11 +167,7 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
                       setProductId(product.id);
                       setOpen(false);
                     }}
-                    className={
-                        errors.productName
-                          ? "border-red-500 focus:border-red-500"
-                          : ""
-                      }
+                    className={errors.productName ? "border-red-500 focus:border-red-500" : ""}
                   >
                     {product.name}
                   </CommandItem>
@@ -177,9 +176,7 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
             </Command>
           </PopoverContent>
         </Popover>
-        {errors.productName && (
-          <p className="text-sm text-red-500">{errors.productName}</p>
-        )}
+        {errors.productName && <p className="text-sm text-red-500">{errors.productName}</p>}
       </div>
 
       {/* Quantité */}
@@ -189,21 +186,15 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
           id="quantity"
           type="number"
           min={1}
-          value={quantity}
+          step={1}
+          value={quantity === 0 ? "" : quantity}
           onChange={(e) => {
-            const val = parseFloat(e.target.value);
-            setQuantity(isNaN(val) ? 0 : Math.max(0.01, val));
-            
+            const val = parseInt(e.target.value, 10);
+            setQuantity(isNaN(val) ? 0 : Math.max(1, val));
           }}
-          className={
-            errors.quantity
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }
+          className={errors.quantity ? "border-red-500 focus:border-red-500" : ""}
         />
-        {errors.quantity && (
-          <p className="text-sm text-red-500">{errors.quantity}</p>
-        )}
+        {errors.quantity && <p className="text-sm text-red-500">{errors.quantity}</p>}
       </div>
 
       {/* Prix unitaire */}
@@ -219,24 +210,25 @@ export default function AddSaleForm({ onAdd, onClose }: AddSaleFormProps) {
             const val = parseFloat(e.target.value);
             setAmount(isNaN(val) ? 0 : Math.max(0.01, val));
           }}
-          className={
-            errors.amount
-              ? "border-red-500 focus:border-red-500"
-              : ""
-          }
+          className={errors.amount ? "border-red-500 focus:border-red-500" : ""}
         />
-        {errors.amount && (
-          <p className="text-sm text-red-500">{errors.amount}</p>
-        )}
+        {errors.amount && <p className="text-sm text-red-500">{errors.amount}</p>}
       </div>
 
       {/* Boutons d'action */}
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onClose} disabled={isPending}>
+        <Button variant="outline" onClick={onClose} disabled={isPending || localLoading}>
           Annuler
         </Button>
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "Enregistrement..." : "Ajouter"}
+        <Button onClick={handleSave} disabled={isPending || localLoading}>
+          {(isPending || localLoading) ? (
+            <>
+              <span className="animate-spin mr-2">⏳</span>
+              Enregistrement...
+            </>
+          ) : (
+            "Ajouter"
+          )}
         </Button>
       </div>
     </div>

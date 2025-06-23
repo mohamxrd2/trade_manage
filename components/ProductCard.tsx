@@ -8,10 +8,17 @@ import { EditProductModal } from "./EditProductModal";
 
 interface ProductCardProps {
   product: Product;
+  remainingQuantity: number;
+  salePercentage: number;
   onDeleteSuccess: () => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onDeleteSuccess }) => {
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  remainingQuantity,
+  salePercentage,
+  onDeleteSuccess,
+}) => {
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("fr-FR", {
       day: "numeric",
@@ -33,32 +40,52 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onDeleteSuccess }) =
               <h3 className="text-lg font-semibold text-foreground @[250px]/card:text-xl">
                 {product.name}
               </h3>
-              <span className="inline-flex items-center px-3 py-1 mt-1 rounded-full text-xs font-semibold shadow-sm text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30">
-                En stock
-              </span>
+              {salePercentage === 100 ? (
+                <span className="inline-flex items-center px-3 py-1 mt-1 rounded-full text-xs font-semibold shadow-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30">
+                  Rupture de stock
+                </span>
+              ) : salePercentage >= 90 ? (
+                <span className="inline-flex items-center px-3 py-1 mt-1 rounded-full text-xs font-semibold shadow-sm text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30">
+                  Stock faible
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 mt-1 rounded-full text-xs font-semibold shadow-sm text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30">
+                  En stock
+                </span>
+              )}
             </div>
           </div>
           <div className="flex space-x-1">
-            <EditProductModal product={product} onEditSuccess={onDeleteSuccess} />
-            <DeleteProductButton productId={product.id} onSuccess={onDeleteSuccess} />
+            <EditProductModal
+              product={product}
+              onEditSuccess={onDeleteSuccess}
+            />
+            <DeleteProductButton
+              productId={product.id}
+              onSuccess={onDeleteSuccess}
+            />
           </div>
         </div>
 
         {/* Stock et Date */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span className="bg-muted px-2 py-1 rounded-md text-xs">
-            Stock : {product.quantity} pièces
+            Stock : {remainingQuantity} pièces
           </span>
-          <span className="text-xs">Ajouté le {formatDate(product.createdAt)}</span>
+          <span className="text-xs">
+            Ajouté le {formatDate(product.createdAt)}
+          </span>
         </div>
 
         {/* Progression */}
         <div>
           <div className="flex justify-between mb-1 text-sm font-medium text-muted-foreground">
             <span>Progression</span>
-            <span className="text-primary font-semibold">33%</span>
+            <span className="text-primary font-semibold">
+              {salePercentage}%
+            </span>
           </div>
-          <Progress value={33} className="h-2 rounded-full" />
+          <Progress value={salePercentage} className="h-2 rounded-full" />
         </div>
       </Card>
     </div>
