@@ -144,7 +144,7 @@ export default function ProfilePage({ user }: ProfileProps) {
             <TabsList className="grid w-full grid-cols-2 h-12">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <LucideUser className="w-4 h-4" />
-                Informations personnell es
+                Informations personnelles
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
