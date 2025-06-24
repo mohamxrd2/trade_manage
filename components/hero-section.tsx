@@ -27,7 +27,7 @@ type User = {
 };
 
 type HeroSectionProps = {
-  user?: User;
+  user: User;
 };
 
 export default function HeroSection({ user }: HeroSectionProps) {

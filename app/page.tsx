@@ -11,13 +11,13 @@ export default async function Home() {
   const user = await getUser();
 
   if (!user) {
-    return redirect("/auth/sign-in"); // or redirect to sign-in page
+    return redirect("/auth/sign-in"); 
   }
  
 
 
   return (
-    <div className="">
+    <div>
      <HeroSection user={user}  />
     </div>
   );
